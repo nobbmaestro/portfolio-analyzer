@@ -40,20 +40,3 @@ def find(data, target, low, high, force=True):
 
             else:
                 return high
-
-def main():
-    import random
-    random.seed(0)
-
-    random_data = [random.randint(-10000000, 10000000) for i in range(random.randint(1, 10000))]
-    random_data.sort()
-
-    target_index = random.randint(0, len(random_data) - 1)
-    target = random_data[target_index]
-
-    index = find(data=random_data, target= target, low=0, high=len(random_data) - 1, force=True)
-    print(target_index, index)
-
-
-if __name__ == '__main__':
-    main()
