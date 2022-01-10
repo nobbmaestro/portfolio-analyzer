@@ -1,6 +1,6 @@
 import investpy
 import datetime
-#from portfolio.functions.find import find
+from portfolio.functions.find import find
 
 class Security(object):
     def __init__(self, security, from_date= datetime.date(year=2015, month=1, day=1)):
@@ -69,7 +69,7 @@ class Security(object):
         """
         if self.SECURITY_PRICE_OBTAINED:
             if from_date == None and to_date == None and get_all == False:
-                return self.__format_security_price_by_date(datetime.date.today(), datetime.date.today())
+                return self.__format_security_price_by_date(datetime.date.today())
 
             if from_date == None and to_date == None and get_all == True:
                 if auto_fill:
@@ -181,6 +181,94 @@ class Security(object):
             formated_price_data[datetime.date(year=row_index.year, month=row_index.month, day=row_index.day)] = price_data[row_index]
 
         return formated_price_data
+
+    def get_security_return(self, time_frame = 'YTD'):
+        """Returns the return of the security for the given timeframe
+
+        Supported timeframes:
+            YTD: Return from Year-to-Date,
+            1W: Return last week,
+            1M: Return last month,
+            3M: Return last three months,
+            6M: Return last six months,
+            1Y: Return last year,
+            2Y: Return last two years,
+            3Y: Return last three years,
+            MAX: Return since initial public offering (IPO)
+            CAGR: Compound Growth Rate 
+            own_date: Return from given date
+        Args:
+            time_frame (str, optional): [description]. Defaults to 'YTD'.
+
+        Raises:
+            ValueError: [description]
+
+        Returns:
+            str: return as percentage from given timeframe
+        """
+        # YTD, 1W, 1M, 3M 6M, 1Y, 2Y, 3Y, MAX, CAGR, own_date
+
+        if time_frame == 'YTD':
+            price_today = self.get_security_price()
+            date = from_date=datetime.date(year=datetime.date.today().year, month=1, day=1)
+            price_at_date = self.get_security_price(date)
+            return "{:.2%}".format(price_today['date']/price_at_date - 1)
+
+        elif time_frame == '1W':
+            price_today = self.get_security_price()
+            date = datetime.date.today() - datetime.timedelta(weeks=1)
+            price_at_date = self.get_security_price(date) 
+            return "{:.2%}".format(price_today/price_at_date - 1)
+
+        elif time_frame == '1M':
+            price_today = self.get_security_price()
+            date = datetime.date.today() - datetime.timedelta(month=1)
+            price_at_date = self.get_security_price(date) 
+            return "{:.2%}".format(price_today/price_at_date - 1)
+
+        elif time_frame == '3M':
+            price_today = self.get_security_price()
+            date = datetime.date.today() - datetime.timedelta(month=3)
+            price_at_date = self.get_security_price(date) 
+            return "{:.2%}".format(price_today/price_at_date - 1)
+
+        elif time_frame == '6M':
+            price_today = self.get_security_price()
+            date = datetime.date.today() - datetime.timedelta(month=6)
+            price_at_date = self.get_security_price(date) 
+            return "{:.2%}".format(price_today/price_at_date - 1)
+
+        elif time_frame == '1Y':
+            price_today = self.get_security_price()
+            date = datetime.date.today() - datetime.timedelta(year=1)
+            price_at_date = self.get_security_price(date) 
+            return "{:.2%}".format(price_today/price_at_date - 1)
+
+        elif time_frame == '2Y':
+            price_today = self.get_security_price()
+            date = datetime.date.today() - datetime.timedelta(year=2)
+            price_at_date = self.get_security_price(date) 
+            return "{:.2%}".format(price_today/price_at_date - 1)
+
+        elif time_frame == '3Y':
+            price_today = self.get_security_price()
+            date = datetime.date.today() - datetime.timedelta(year=3)
+            price_at_date = self.get_security_price(date) 
+            return "{:.2%}".format(price_today/price_at_date - 1)
+
+        elif time_frame == 'MAX':
+            pass
+
+        elif time_frame == 'CAGR':
+            pass
+
+        elif type(time_frame) == datetime.date:
+            price_today = self.get_security_price()
+            price_at_date = self.get_security_price(time_frame) 
+            return "{:.2%}".format(price_today/price_at_date - 1)
+
+        else:
+            raise ValueError
 
     def get_basic_info(self):
         """Returns basic information about the security
@@ -403,14 +491,3 @@ def find(data, target, low, high, force=True):
 
             else:
                 return high
-
-def main():
-    a = Security('USD/SEK')
-
-    from_date = datetime.date(year=2022, month=1, day=1)
-    to_date = datetime.date(year=2022, month=1, day=9)
-
-    print(a.get_security_price(from_date, to_date, auto_fill=True))
-
-if __name__ == '__main__':
-    main()

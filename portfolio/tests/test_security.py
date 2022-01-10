@@ -235,6 +235,10 @@ class TestMethod_get_security_price(unittest.TestCase):
         self.assertRaises(TypeError, self.securities[0].get_security_price(), datetime.date(year=2021, month=5, day=5), 1)
         self.assertRaises(TypeError, self.securities[0].get_security_price(), datetime.date(year=2021, month=5, day=5), list())
 
+    def test_get_latest_security_price(self):
+        results = self.securities[0].get_security_price()
+        self.assertNotEqual(results, {})
+
     def test_get_security_price_output(self):
         for security in self.securities:
             for date in list(self.random_security_prices[security.get_basic_info()['name']].keys()):
