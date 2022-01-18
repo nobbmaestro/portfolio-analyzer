@@ -1,4 +1,5 @@
 import unittest
+import logging
 import datetime
 from time import sleep 
 
@@ -39,7 +40,7 @@ class TestInit(unittest.TestCase):
         self.assertRaises(RuntimeError, Security, '123')
         self.assertRaises(ValueError, Security, None, datetime.date.today()+datetime.timedelta(days=1))
 
-class TestMethod_get_basic_info(unittest.TestCase):
+class TestMethod_get_security_info(unittest.TestCase):
     def setUp(self):
         # test stock function on Evolution Gaming Group AB
         self.stock_data = {
@@ -84,12 +85,12 @@ class TestMethod_get_basic_info(unittest.TestCase):
         sleep(5)
 
     def test_output_type(self):
-        self.assertEqual(type(self.stock.get_basic_info())          , dict)
-        self.assertEqual(type(self.fund.get_basic_info())           , dict)
-        self.assertEqual(type(self.currency_cross.get_basic_info()) , dict)
+        self.assertEqual(type(self.stock.get_security_info())          , dict)
+        self.assertEqual(type(self.fund.get_security_info())           , dict)
+        self.assertEqual(type(self.currency_cross.get_security_info()) , dict)
 
     def test_output_for_stock(self):
-        results_stock = self.stock.get_basic_info()
+        results_stock = self.stock.get_security_info()
 
         self.assertEqual(results_stock['name']          , self.stock_data['name'])
         self.assertEqual(results_stock['full_name']     , self.stock_data['full_name'])
@@ -101,7 +102,7 @@ class TestMethod_get_basic_info(unittest.TestCase):
 
 
     def test_output_for_fund(self):
-        results_fund = self.fund.get_basic_info()
+        results_fund = self.fund.get_security_info()
 
         self.assertEqual(results_fund['name']          , self.fund_data['name'])
         self.assertEqual(results_fund['full_name']     , self.fund_data['full_name'])
@@ -112,7 +113,7 @@ class TestMethod_get_basic_info(unittest.TestCase):
         self.assertEqual(results_fund['currency']      , self.fund_data['currency'])
 
     def test_output_for_currency_cross(self):
-        results_currency_cross = self.currency_cross.get_basic_info()
+        results_currency_cross = self.currency_cross.get_security_info()
 
         self.assertEqual(results_currency_cross['name']          , self.currency_cross_data['name'])
         self.assertEqual(results_currency_cross['full_name']     , self.currency_cross_data['full_name'])
@@ -220,7 +221,7 @@ class TestMethod_get_security_price(unittest.TestCase):
                 datetime.date(year=2022, month=1, day=6): 9.139,
                 datetime.date(year=2022, month=1, day=7): 9.0428,
                 datetime.date(year=2022, month=1, day=8): 9.0428,
-                datetime.date(year=2022, month=1, day=9): 9.0578
+                datetime.date(year=2022, month=1, day=9): 9.0428
             }   
         }
 
@@ -241,7 +242,8 @@ class TestMethod_get_security_price(unittest.TestCase):
 
     def test_get_security_price_output(self):
         for security in self.securities:
-            for date in list(self.random_security_prices[security.get_basic_info()['name']].keys()):
+            dates = list(self.random_security_prices[security.get_security_info()['name']].keys())
+            for date in dates:
                 results = security.get_security_price(date)
                 # test whether output is of length 1, i.e. stock price for a given day
                 self.assertEqual(len(list(results.keys())), 1, msg='output is not for single day')
@@ -249,43 +251,50 @@ class TestMethod_get_security_price(unittest.TestCase):
                 # test whether stock price matches raw data
                 self.assertEqual(
                     results[date], 
-                    self.random_security_prices[security.get_basic_info()['name']][date], 
-                    msg=self.msg_price.format(security= security.get_basic_info()['name'], date= date)
+                    self.random_security_prices[security.get_security_info()['name']][date], 
+                    msg=self.msg_price.format(security= security.get_security_info()['name'], date= date)
                 )
 
     def test_get_security_historical_price_output(self):
         for security in self.securities:
             results = security.get_security_price(self.from_date, self.to_date)
-            for date in list(self.security_price_range_short[security.get_basic_info()['name']].keys()):
+            dates = list(self.security_price_range_short[security.get_security_info()['name']].keys())
+            for date in dates:
 
                 # test whether stock price matches raw data
                 self.assertEqual(
                     results[date], 
-                    self.security_price_range_short[security.get_basic_info()['name']][date], 
-                    msg=self.msg_price.format(security= security.get_basic_info()['name'], date= date)
+                    self.security_price_range_short[security.get_security_info()['name']][date], 
+                    msg=self.msg_price.format(security= security.get_security_info()['name'], date= date)
                 )
 
     def test_get_security_historical_price_with_auto_fill_output(self):
+        log = logging.getLogger('test_security.test_get_security_historical_price_with_auto_fill_output')
+        
+
         for security in self.securities:
             results = security.get_security_price(self.from_date, self.to_date, auto_fill= True)
-            for date in list(self.security_price_range_long[security.get_basic_info()['name']].keys()):
+            dates = list(self.security_price_range_long[security.get_security_info()['name']].keys())
 
+            for date in dates:
+                # log.debug(msg= self.msg_price.format(security= security.get_security_info()['name']))
                 # test whether stock price matches raw data
                 self.assertEqual(
                     results[date], 
-                    self.security_price_range_long[security.get_basic_info()['name']][date], 
-                    msg=self.msg_price.format(security= security.get_basic_info()['name'], date= date)
+                    self.security_price_range_long[security.get_security_info()['name']][date], 
+                    msg=self.msg_price.format(security= security.get_security_info()['name'], date= date)
                 )
 
     def test_get_security_historical_price_with_get_all_output(self):
         results = self.stock_with_from_date.get_security_price(get_all=True, auto_fill= False)
-        for date in list(self.security_price_range_short[self.stock_with_from_date.get_basic_info()['name']].keys()):
+        dates = list(self.security_price_range_short[self.stock_with_from_date.get_security_info()['name']].keys())
+        for date in dates:
 
             # test whether stock price matches raw data
             self.assertEqual(
                 results[date], 
-                self.security_price_range_short[self.stock_with_from_date.get_basic_info()['name']][date], 
-                msg=self.msg_price.format(security= self.stock_with_from_date.get_basic_info()['name'], date= date)
+                self.security_price_range_short[self.stock_with_from_date.get_security_info()['name']][date], 
+                msg=self.msg_price.format(security= self.stock_with_from_date.get_security_info()['name'], date= date)
             )
 
     def test_get_security_historical_price_with_get_all_and_auto_fill_output(self):
@@ -305,11 +314,45 @@ class TestMethod_get_security_price(unittest.TestCase):
             }
         }
         results = self.stock_with_from_date.get_security_price(get_all=True, auto_fill= True)
-        for date in list(self.security_price_range_long[self.stock_with_from_date.get_basic_info()['name']].keys()):
+        for date in list(self.security_price_range_long[self.stock_with_from_date.get_security_info()['name']].keys()):
 
             # test whether stock price matches raw data
             self.assertEqual(
                 results[date], 
-                self.security_price_range_long[self.stock_with_from_date.get_basic_info()['name']][date], 
-                msg=self.msg_price.format(security= self.stock_with_from_date.get_basic_info()['name'], date= date)
+                self.security_price_range_long[self.stock_with_from_date.get_security_info()['name']][date], 
+                msg=self.msg_price.format(security= self.stock_with_from_date.get_security_info()['name'], date= date)
             )
+
+class TestMethod_get_security_return(unittest.TestCase):
+    def setUp(self):
+        self.stock = Security('SE0012673267')
+        sleep(5)
+
+    def test_type(self):
+        self.assertRaises(TypeError, self.stock.get_security_return, None)
+        self.assertRaises(TypeError, self.stock.get_security_return, 1)
+        self.assertRaises(TypeError, self.stock.get_security_return, list())
+        self.assertRaises(TypeError, self.stock.get_security_return, datetime.timedelta(days=1))
+
+    def test_types_of_time_frame(self):
+        args_to_pass = [
+            '1D', '1d', 
+            'YTD', 'ytd', 'Ytd', 'yTD', 'yTd', 'ytD',
+            '1W', '1w', 
+            '1M', '1m', 
+            '3M', '3m', 
+            '6M', '6m', 
+            '1Y', '1y', 
+            '3Y', '3y', 
+            'MAX', 'max', 'Max', 'mAX', 'mAx', 'maX',
+            'CAGR', 'cagr', 'Cagr', 'cAGR', 'cAgr', 
+            datetime.date(year=2020, month=1, day=1)   
+        ]
+        msg_on_fail = '{arg} raised error'
+        for arg in args_to_pass:
+            try:
+                result = self.stock.get_security_return(arg)
+                self.assertTrue(result is not None, msg_on_fail.format(arg=arg))
+
+            except RuntimeError:
+                self.assertFalse(True, msg=msg_on_fail.format(arg=arg))

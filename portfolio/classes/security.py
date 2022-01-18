@@ -1,5 +1,6 @@
 import investpy
 import datetime
+from dateutil.relativedelta import relativedelta
 from portfolio.functions.find import find
 
 class Security(object):
@@ -35,7 +36,7 @@ class Security(object):
         else:
             self.security = security
             try:
-                self.name, self.full_name, self.security_type, self.isin, self.symbol, self.country, self.currency  = self.get_basic_info()
+                self.name, self.full_name, self.security_type, self.isin, self.symbol, self.country, self.currency  = self.get_security_info()
                 self.historical_price = self.get_security_price()
  
             except RuntimeError as e:
@@ -43,6 +44,46 @@ class Security(object):
 
     def __repr__(self):
         return self.name
+
+    def get_security_info(self):
+        """Returns basic information about the security
+
+            Raises:
+                RuntimeError: several matched found
+                RuntimeError: no results were found for the given security'
+
+            Returns:
+                dict: containing name, full name, security type, isin, symbol, country and currency of the given security
+        """
+        if self.SECURITY_IDENTIFIED:
+            return {
+                'name'          : self.name,
+                'full_name'     : self.full_name,
+                'security_type' : self.security_type,
+                'isin'          : self.isin,
+                'symbol'        : self.symbol,
+                'country'       : self.country,
+                'currency'      : self.currency
+                }
+
+        else:
+            for security_type in self.SUPPORTED_SECURITY_TYPES:
+                try:
+                    basic_info = eval(self.__get_search_security_query_investpy(security_type, self.security))
+                    if len(basic_info.index) == 1:
+                        self.SECURITY_IDENTIFIED = True
+                        return self.__format_security_info(security_type, basic_info)
+                    else:
+                        raise RuntimeError('several matched found')
+
+                except RuntimeError as e:
+                    if 'ERR#0043' in str(e):
+                        pass
+                    else:
+                        raise RuntimeError(e)
+            
+            raise RuntimeError('no results were found for the given security')
+
 
     def get_security_price(self, from_date = None, to_date = None, get_all = False, auto_fill = False):
         """Return a dictionary of the historical price of the security. If no args given, return latest close price.
@@ -92,6 +133,176 @@ class Security(object):
             self.SECURITY_PRICE_OBTAINED = True
             return self.__format_security_price(price_data)
 
+    def get_security_return(self, time_frame = 'YTD'):
+        """Returns the return of the security for the given timeframe
+
+        Supported timeframes:
+            YTD: Return from Year-to-Date,
+            1D: Return last trading day,
+            1W: Return last week,
+            1M: Return last month,
+            3M: Return last three months,
+            6M: Return last six months,
+            1Y: Return last year,
+            3Y: Return last three years,
+            MAX: Return since initial public offering (IPO)
+            CAGR: Compound Annual Growth Rate 
+            datetime.date: Return from given date
+            
+        Args:
+            time_frame (str, optional): [description]. Defaults to 'YTD'.
+
+        Raises:
+            ValueError: [description]
+
+        Returns:
+            str: return as percentage from given timeframe
+        """
+        if type(time_frame) not in [str, datetime.date]:
+            raise TypeError('arg must be of type str or datetime.date') 
+
+        elif type(time_frame) is str:
+            time_frame = time_frame.upper()
+
+        try:
+            if time_frame == '1D':
+                date = datetime.date.today() - datetime.timedelta(days=1)
+                ending_value = self.get_security_price()
+                beginning_value = self.get_security_price(date)
+                return "{:.2%}".format(ending_value[list(ending_value.keys())[0]] / beginning_value[list(beginning_value.keys())[0]] - 1) 
+
+            elif time_frame == 'YTD':
+                date = datetime.date(year=datetime.date.today().year, month=1, day=1)
+                ending_value = self.get_security_price()
+                beginning_value = self.get_security_price(date)
+                return "{:.2%}".format(ending_value[list(ending_value.keys())[0]] / beginning_value[list(beginning_value.keys())[0]] - 1) 
+
+            elif time_frame == '1W':
+                date = datetime.date.today() - datetime.timedelta(weeks=1)
+                ending_value = self.get_security_price()
+                beginning_value = self.get_security_price(date) 
+                return "{:.2%}".format(ending_value[list(ending_value.keys())[0]] / beginning_value[list(beginning_value.keys())[0]] - 1) 
+
+            elif time_frame == '1M':
+                date = datetime.date.today() - relativedelta(months=+1)
+                ending_value = self.get_security_price()
+                beginning_value = self.get_security_price(date) 
+                return "{:.2%}".format(ending_value[list(ending_value.keys())[0]] / beginning_value[list(beginning_value.keys())[0]] - 1) 
+
+            elif time_frame == '3M':
+                date = datetime.date.today() - relativedelta(months=+3)
+                ending_value = self.get_security_price()
+                beginning_value = self.get_security_price(date) 
+                return "{:.2%}".format(ending_value[list(ending_value.keys())[0]] / beginning_value[list(beginning_value.keys())[0]] - 1) 
+
+            elif time_frame == '6M':
+                date = datetime.date.today() - relativedelta(months=+6)
+                ending_value = self.get_security_price()
+                beginning_value = self.get_security_price(date) 
+                return "{:.2%}".format(ending_value[list(ending_value.keys())[0]] / beginning_value[list(beginning_value.keys())[0]] - 1) 
+
+            elif time_frame == '1Y':
+                date = datetime.date.today() - relativedelta(years=+1)
+                ending_value = self.get_security_price()
+                beginning_value = self.get_security_price(date) 
+                return "{:.2%}".format(ending_value[list(ending_value.keys())[0]] / beginning_value[list(beginning_value.keys())[0]] - 1) 
+
+            elif time_frame == '3Y':
+                date = datetime.date.today() - relativedelta(years=+3)
+                ending_value = self.get_security_price()
+                beginning_value = self.get_security_price(date) 
+                return "{:.2%}".format(ending_value[list(ending_value.keys())[0]] / beginning_value[list(beginning_value.keys())[0]] - 1) 
+
+            elif time_frame == 'MAX':
+                data = self.get_security_price(get_all=True) 
+                ending_value = data[list(data.keys())[-1]]
+                beginning_value = data[list(data.keys())[0]]
+                return "{:.2%}".format(ending_value/beginning_value - 1)
+
+            elif time_frame == 'CAGR':
+                # Formula: CAGR = (EV/BV)^(1/n) - 1, where n is the number of years
+                ending_value = self.get_security_price()
+                ending_date = list(ending_value.keys())[0]
+
+                beginning_value = self.get_security_price(get_all=True) 
+                beginning_date = list(beginning_value.keys())[0]
+                n = (ending_date - beginning_date).days / 365
+
+                return "{:.2%}".format((ending_value[ending_date]/beginning_value[beginning_date]) ** (1/n) - 1)
+
+            elif type(time_frame) == datetime.date:
+                ending_value = self.get_security_price()
+                beginning_value = self.get_security_price(time_frame) 
+                return "{:.2%}".format(ending_value[list(ending_value.keys())[0]] / beginning_value[list(beginning_value.keys())[0]] - 1)
+
+            else:
+                raise ValueError('Incorrect function')
+        
+        except ValueError as e:
+            # If time_frame exceeds availble price data, target out-of-bounds error will be raised. 
+            # Then return None
+            if str(e) == "target out-of-bounds":
+                return None
+
+            else:
+                raise RuntimeError
+
+    def __format_security_info(self, security_type, basic_info):
+            try:
+                name = basic_info.to_dict()['name'][0]
+            except KeyError:
+                name = None
+
+            try:
+                full_name = basic_info.to_dict()['full_name'][0]
+            except KeyError:
+                full_name = None
+
+            try:
+                isin = basic_info.to_dict()['isin'][0]
+            except KeyError:
+                isin = None
+
+            try:
+                symbol = basic_info.to_dict()['symbol'][0]
+            except KeyError:
+                symbol = None
+
+            try:
+                country = basic_info.to_dict()['country'][0]
+            except KeyError:
+                country = None
+
+            try:
+                currency = basic_info.to_dict()['currency'][0]
+            except KeyError:
+                if security_type == 'currency_cross':
+                    currency = name[4:]
+
+                else:
+                    currency = None
+
+            return name, full_name, security_type, isin, symbol, country, currency
+
+    def __format_security_price(self, price_data):
+        """Converts price data from pandas.DataFrame to dict
+
+        Args:
+            price_data (pandas.DataFrame): price data
+
+        Returns:
+            dict: 
+                key (datetime.date): date index
+                value (int): price at date index
+        """
+        price_data = price_data.Close.to_dict()
+        formated_price_data = {}
+
+        for row_index in price_data.keys():
+            formated_price_data[datetime.date(year=row_index.year, month=row_index.month, day=row_index.day)] = price_data[row_index]
+
+        return formated_price_data
+
     def __format_security_price_by_date(self, from_date, to_date= None, auto_fill= False):
         """Returns formated security prices between given dates.
 
@@ -134,6 +345,7 @@ class Security(object):
             to_index = from_index
 
         for i in range(from_index, to_index + 1):
+            # print(list_of_dates[i])
             if auto_fill == False:
                 formated_price_data[list_of_dates[i]] = self.historical_price[list_of_dates[i]]
 
@@ -145,10 +357,10 @@ class Security(object):
 
                         # insert j number of days between date at index i and i+1 with price at index i
                         for j in range((list_of_dates[i+1] - list_of_dates[i]).days):
-
                             filler_day = list_of_dates[i] + datetime.timedelta(days=j)
-                            if filler_day >= from_date and filler_day < to_date:
+                            if filler_day >= from_date and filler_day <= to_date:
                                 formated_price_data[filler_day] = self.historical_price[list_of_dates[i]]
+                                # print('\t', filler_day)
 
                     else:
                         formated_price_data[list_of_dates[i]] = self.historical_price[list_of_dates[i]]
@@ -160,192 +372,10 @@ class Security(object):
                         for k in range((to_date - list_of_dates[i]).days + 1):
                             filler_day = list_of_dates[i] + datetime.timedelta(days=k)
                             formated_price_data[filler_day] = self.historical_price[list_of_dates[i]]
+                            # print('\t', filler_day)
 
         return formated_price_data
-
-    def __format_security_price(self, price_data):
-        """Converts price data from pandas.DataFrame to dict
-
-        Args:
-            price_data (pandas.DataFrame): price data
-
-        Returns:
-            dict: 
-                key (datetime.date): date index
-                value (int): price at date index
-        """
-        price_data = price_data.Close.to_dict()
-        formated_price_data = {}
-
-        for row_index in price_data.keys():
-            formated_price_data[datetime.date(year=row_index.year, month=row_index.month, day=row_index.day)] = price_data[row_index]
-
-        return formated_price_data
-
-    def get_security_return(self, time_frame = 'YTD'):
-        """Returns the return of the security for the given timeframe
-
-        Supported timeframes:
-            YTD: Return from Year-to-Date,
-            1W: Return last week,
-            1M: Return last month,
-            3M: Return last three months,
-            6M: Return last six months,
-            1Y: Return last year,
-            2Y: Return last two years,
-            3Y: Return last three years,
-            MAX: Return since initial public offering (IPO)
-            CAGR: Compound Growth Rate 
-            own_date: Return from given date
-        Args:
-            time_frame (str, optional): [description]. Defaults to 'YTD'.
-
-        Raises:
-            ValueError: [description]
-
-        Returns:
-            str: return as percentage from given timeframe
-        """
-        # YTD, 1W, 1M, 3M 6M, 1Y, 2Y, 3Y, MAX, CAGR, own_date
-
-        if time_frame == 'YTD':
-            price_today = self.get_security_price()
-            date = from_date=datetime.date(year=datetime.date.today().year, month=1, day=1)
-            price_at_date = self.get_security_price(date)
-            return "{:.2%}".format(price_today['date']/price_at_date - 1)
-
-        elif time_frame == '1W':
-            price_today = self.get_security_price()
-            date = datetime.date.today() - datetime.timedelta(weeks=1)
-            price_at_date = self.get_security_price(date) 
-            return "{:.2%}".format(price_today/price_at_date - 1)
-
-        elif time_frame == '1M':
-            price_today = self.get_security_price()
-            date = datetime.date.today() - datetime.timedelta(month=1)
-            price_at_date = self.get_security_price(date) 
-            return "{:.2%}".format(price_today/price_at_date - 1)
-
-        elif time_frame == '3M':
-            price_today = self.get_security_price()
-            date = datetime.date.today() - datetime.timedelta(month=3)
-            price_at_date = self.get_security_price(date) 
-            return "{:.2%}".format(price_today/price_at_date - 1)
-
-        elif time_frame == '6M':
-            price_today = self.get_security_price()
-            date = datetime.date.today() - datetime.timedelta(month=6)
-            price_at_date = self.get_security_price(date) 
-            return "{:.2%}".format(price_today/price_at_date - 1)
-
-        elif time_frame == '1Y':
-            price_today = self.get_security_price()
-            date = datetime.date.today() - datetime.timedelta(year=1)
-            price_at_date = self.get_security_price(date) 
-            return "{:.2%}".format(price_today/price_at_date - 1)
-
-        elif time_frame == '2Y':
-            price_today = self.get_security_price()
-            date = datetime.date.today() - datetime.timedelta(year=2)
-            price_at_date = self.get_security_price(date) 
-            return "{:.2%}".format(price_today/price_at_date - 1)
-
-        elif time_frame == '3Y':
-            price_today = self.get_security_price()
-            date = datetime.date.today() - datetime.timedelta(year=3)
-            price_at_date = self.get_security_price(date) 
-            return "{:.2%}".format(price_today/price_at_date - 1)
-
-        elif time_frame == 'MAX':
-            pass
-
-        elif time_frame == 'CAGR':
-            pass
-
-        elif type(time_frame) == datetime.date:
-            price_today = self.get_security_price()
-            price_at_date = self.get_security_price(time_frame) 
-            return "{:.2%}".format(price_today/price_at_date - 1)
-
-        else:
-            raise ValueError
-
-    def get_basic_info(self):
-        """Returns basic information about the security
-
-            Raises:
-                RuntimeError: several matched found
-                RuntimeError: no results were found for the given security'
-
-            Returns:
-                dict: containing name, full name, security type, isin, symbol, country and currency of the given security
-        """
-        if self.SECURITY_IDENTIFIED:
-            return {
-                'name'          : self.name,
-                'full_name'     : self.full_name,
-                'security_type' : self.security_type,
-                'isin'          : self.isin,
-                'symbol'        : self.symbol,
-                'country'       : self.country,
-                'currency'      : self.currency
-                }
-
-        else:
-            for security_type in self.SUPPORTED_SECURITY_TYPES:
-                try:
-                    basic_info = eval(self.__get_search_security_query_investpy(security_type, self.security))
-                    if len(basic_info.index) == 1:
-                        self.SECURITY_IDENTIFIED = True
-                        return self.__format_basic_info(security_type, basic_info)
-                    else:
-                        raise RuntimeError('several matched found')
-
-                except RuntimeError as e:
-                    if 'ERR#0043' in str(e):
-                        pass
-                    else:
-                        raise RuntimeError(e)
-            
-            raise RuntimeError('no results were found for the given security')
-
-    def __format_basic_info(self, security_type, basic_info):
-            try:
-                name = basic_info.to_dict()['name'][0]
-            except KeyError:
-                name = None
-
-            try:
-                full_name = basic_info.to_dict()['full_name'][0]
-            except KeyError:
-                full_name = None
-
-            try:
-                isin = basic_info.to_dict()['isin'][0]
-            except KeyError:
-                isin = None
-
-            try:
-                symbol = basic_info.to_dict()['symbol'][0]
-            except KeyError:
-                symbol = None
-
-            try:
-                country = basic_info.to_dict()['country'][0]
-            except KeyError:
-                country = None
-
-            try:
-                currency = basic_info.to_dict()['currency'][0]
-            except KeyError:
-                if security_type == 'currency_cross':
-                    currency = name[4:]
-
-                else:
-                    currency = None
-
-            return name, full_name, security_type, isin, symbol, country, currency
-        
+  
     def __get_search_security_query_investpy(self, security_type, security):
         """Prepares the investpy query, output ready to be used with eval().
 
@@ -448,46 +478,3 @@ class Security(object):
         else:
             date_format = "{day}/{month}/{year}"
             return date_format.format(day=date_value.day, month=date_value.month, year=date_value.year)
-
-def find(data, target, low, high, force=True):
-    """Searches for the index of the target in the data by using binary search. Assumes sorted data.
-
-    Args:
-        data (list): target data.
-        target (any): target to be found.
-        low (int): low-end initial guess index, set to '0' if unknown.
-        high (int): high-end initital guess index, set to 'len(data) - 1' if unknown.
-        force (boolean): If true, target must be inside data. If False, returns index to closest but smaller element.
-
-    Raises:
-        ValueError: target out-of-bounds
-        ValueError: target not in data
-
-    Returns:
-        int: index of the target or closest smallest index 
-
-    """
-    if target < data[0]:
-        raise ValueError('target out-of-bounds')
-
-    elif target > data[len(data) - 1] and force == True:
-        raise ValueError('target out-of-bounds')
-
-    else:
-        if high >= low:
-            mid = (low + high) // 2
-
-            if data[mid] == target:
-                return mid
-
-            elif data[mid] > target:
-                return find(data= data, target= target, low= low, high= mid - 1, force = force)
-
-            else:
-                return find(data= data, target= target, low= mid + 1, high= high, force= force)
-        else:
-            if force:
-                raise ValueError('target not in data')
-
-            else:
-                return high
